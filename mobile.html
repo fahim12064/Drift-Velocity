@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Drift Velocity Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1a2e 100%);
+            color: #e0e0e0;
+            height: 100vh;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            width: 100vw;
+            gap: 0;
+        }
+
+        /* Left Panel - Controls */
+        .control-panel {
+            background: #0f1419;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #2a3f5f;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            width: 320px;
+            flex-shrink: 0;
+        }
+
+        .control-panel h1 {
+            color: #64ffda;
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .control-panel .subtitle {
+            color: #a0a0a0;
+            font-size: 0.8em;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .control-group {
+            background: #1a1f2e;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #2a3f5f;
+        }
+
+        .control-group label {
+            display: block;
+            color: #64ffda;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.85em;
+        }
+
+        .value-display {
+            color: #ffd700;
+            font-size: 0.95em;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #2a3f5f;
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #64ffda;
+            cursor: grab;
+            box-shadow: 0 0 10px rgba(100, 255, 218, 0.6);
+        }
+
+        .section-title {
+            color: #64ffda;
+            font-size: 0.9em;
+            margin: 15px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #2a3f5f;
+        }
+
+        .calculation-box {
+            background: #1a1f2e;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border-left: 3px solid #64ffda;
+            font-family: 'Courier New', monospace;
+        }
+
+        .calc-label {
+            color: #a0a0a0;
+            font-size: 0.7em;
+        }
+
+        .calc-value {
+            color: #ffd700;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .info-box {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid #ffc107;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 0.75em;
+            line-height: 1.3;
+            color: #ffeb3b;
+        }
+
+        /* Right Panel - Simulation */
+        .simulation-panel {
+            background: #0a0e27;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .simulation-header {
+            background: rgba(15, 20, 25, 0.95);
+            padding: 10px 20px;
+            border-bottom: 2px solid #2a3f5f;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .simulation-title {
+            color: #64ffda;
+            font-size: 1em;
+            font-weight: 600;
+        }
+
+        .mode-indicator {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mode-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: 600;
+            background: #1a1f2e;
+            border: 1px solid #2a3f5f;
+        }
+
+        .mode-badge.active {
+            background: #64ffda;
+            color: #0a0e27;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(100, 255, 218, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(100, 255, 218, 0.8); }
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #0a0e27 0%, #050a15 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 20, 25, 0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #2a3f5f;
+            font-size: 0.8em;
+            pointer-events: none;
+        }
+        
+        .legend-items { display: flex; flex-direction: column; gap: 5px; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        .stats-overlay {
+            position: absolute;
+            top: 60px;
+            right: 20px;
+            background: rgba(15, 20, 25, 0.95);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #2a3f5f;
+            min-width: 160px;
+            font-size: 0.8em;
+        }
+        
+        .stat-item { margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .stat-value { font-family: 'Courier New', monospace; font-weight: bold; }
+
+        /* MOBILE RESPONSIVE */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column-reverse;
+            }
+            .control-panel {
+                width: 100%;
+                height: 45vh;
+                border-right: none;
+                border-top: 2px solid #2a3f5f;
+                padding: 15px;
+            }
+            .simulation-panel {
+                height: 55vh;
+            }
+            .stats-overlay { display: none; }
+            .legend { font-size: 0.7em; padding: 8px; bottom: 10px; left: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Left Panel: Controls -->
+        <div class="control-panel">
+            <h1>⚡ Drift Lab (Final)</h1>
+            <p class="subtitle">Accurate Physics & Visual Scaling</p>
+
+            <div class="section-title">⚙️ Parameters</div>
+
+            <div class="control-group">
+                <label>Voltage (V)</label>
+                <div class="value-display" id="voltageValue">0.0 V</div>
+                <input type="range" id="voltage" min="0" max="12" step="0.1" value="0">
+            </div>
+
+            <div class="control-group">
+                <label>Temperature (T)</label>
+                <div class="value-display" id="tempValue">300 K</div>
+                <input type="range" id="temperature" min="100" max="1000" step="10" value="300">
+            </div>
+
+            <div class="control-group">
+                <label>Conductor Length (L)</label>
+                <div class="value-display" id="lengthValue">1.0 m</div>
+                <input type="range" id="length" min="0.5" max="5.0" step="0.1" value="1.0">
+            </div>
+
+            <div class="control-group">
+                <label>Electron Count</label>
+                <div class="value-display" id="electronCountValue">200 electrons</div>
+                <input type="range" id="electronCount" min="50" max="400" step="10" value="200">
+            </div>
+
+            <div class="section-title">📊 Analysis</div>
+
+            <div class="calculation-box">
+                <div class="calc-label">Drift Velocity (Visual)</div>
+                <div class="calc-value">v<sub>d</sub> = <span id="calcVd">0.00</span> px/f</div>
+            </div>
+
+            <div class="calculation-box">
+                <div class="calc-label">Electric Field (E)</div>
+                <div class="calc-value">E = <span id="calcE">0.00</span> V/m</div>
+            </div>
+
+            <div class="calculation-box">
+                <div class="calc-label">Current (Scaled)</div>
+                <div class="calc-value">I ∝ n e v<sub>d</sub></div>
+            </div>
+
+            <div class="info-box">
+                <strong>⚠️ Note:</strong><br>
+                • Visual speeds scaled for screen.<br>
+                • E-Field points Right → Left (+ to -).<br>
+                • Electrons drift Left → Right.
+            </div>
+        </div>
+
+        <!-- Right Panel: Simulation -->
+        <div class="simulation-panel">
+            <div class="simulation-header">
+                <div class="simulation-title">Interactive Conductor</div>
+                <div class="mode-indicator">
+                    <div class="mode-badge" id="thermalBadge">Thermal Motion</div>
+                    <div class="mode-badge" id="driftBadge">Drift Active</div>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="simulationCanvas"></canvas>
+                
+                <div class="legend">
+                    <div class="legend-items">
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: #4da6ff; box-shadow: 0 0 10px #4da6ff;"></div>
+                            <span>Electron (-)</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: #ff6b6b;"></div>
+                            <span>E-field direction ←</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-dot" style="background: #ffd700;"></div>
+                            <span>Drift direction →</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-overlay">
+                    <div class="stat-item">
+                        <span>Net Drift Bias:</span>
+                        <span class="stat-value" id="avgDrift">0.00 px</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Electrons:</span>
+                        <span class="stat-value" id="electronStat">200</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>FPS:</span>
+                        <span class="stat-value" id="fpsStat">60</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('simulationCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Constants
+        const ELECTRON_CHARGE = 1.6e-19;
+        const BASE_THERMAL_SPEED = 2.5;
+        
+        // State
+        let voltage = 0;
+        let temperature = 300;
+        let length = 1.0;
+        let numElectrons = 200;
+        
+        // Calculated
+        let electricField = 0;
+        let driftVelocity = 0;
+        let thermalSpeed = BASE_THERMAL_SPEED;
+        
+        // Conductor
+        let conductor = {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 80,
+            isDragging: false,
+            dragOffsetX: 0,
+            dragOffsetY: 0
+        };
+        
+        let electrons = [];
+        
+        // Performance
+        let lastFrameTime = Date.now();
+        let fps = 60;
+        
+        // --- Init & Resize (FIXED LENGTH LOGIC) ---
+        function resize() {
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+            
+            conductor.x = canvas.width / 2;
+            conductor.y = canvas.height / 2;
+
+            // FIX: Linear Scaling for Conductor Width
+            // Formula: Base 300px + (Length * 120px)
+            const calculatedWidth = 300 + (length * 120);
+            
+            // Ensure it doesn't go off screen
+            conductor.width = Math.min(calculatedWidth, canvas.width - 40);
+        }
+        
+        window.addEventListener('resize', resize);
+        resize(); // Call once
+
+        function initElectrons() {
+            electrons = [];
+            for (let i = 0; i < numElectrons; i++) {
+                electrons.push(createElectron());
+            }
+        }
+        
+        function createElectron() {
+            const angle = Math.random() * Math.PI * 2;
+            return {
+                x: conductor.x - conductor.width/2 + Math.random() * conductor.width,
+                y: conductor.y - conductor.height/2 + Math.random() * conductor.height,
+                vx: Math.cos(angle) * thermalSpeed,
+                vy: Math.sin(angle) * thermalSpeed,
+                angle: angle,
+                trail: []
+            };
+        }
+        
+        function updateElectronCount() {
+            const diff = numElectrons - electrons.length;
+            if (diff > 0) {
+                for (let i = 0; i < diff; i++) electrons.push(createElectron());
+            } else if (diff < 0) {
+                electrons.splice(0, -diff);
+            }
+        }
+        
+        function updateCalculations() {
+            // E = V / L
+            electricField = length > 0 ? voltage / length : 0;
+            
+            // Thermal Speed ∝ sqrt(T)
+            thermalSpeed = BASE_THERMAL_SPEED * Math.sqrt(temperature / 300);
+
+            // Drift Speed (Visual)
+            const driftSpeedPixels = electricField * 0.4; 
+            driftVelocity = driftSpeedPixels;
+            
+            // UI Updates
+            document.getElementById('calcE').textContent = electricField.toFixed(2);
+            document.getElementById('calcVd').textContent = driftVelocity.toFixed(3);
+            
+            const driftBadge = document.getElementById('driftBadge');
+            if (voltage > 0.1) driftBadge.classList.add('active');
+            else driftBadge.classList.remove('active');
+        }
+        
+        function updateElectrons() {
+            const driftSpeed = driftVelocity;
+            let totalDrift = 0;
+            
+            electrons.forEach(electron => {
+                // Thermal Jitter
+                electron.angle += (Math.random() - 0.5) * 0.3;
+                const speed = thermalSpeed * (0.8 + Math.random() * 0.4);
+                electron.vx = Math.cos(electron.angle) * speed;
+                electron.vy = Math.sin(electron.angle) * speed;
+                
+                // Apply Drift (Left -> Right)
+                const oldX = electron.x;
+                electron.x += electron.vx + driftSpeed; // POSITIVE driftSpeed
+                electron.y += electron.vy;
+                
+                // Calculate Net Bias
+                totalDrift += (electron.x - oldX);
+                
+                electron.trail.push({x: electron.x, y: electron.y});
+                if (electron.trail.length > 15) electron.trail.shift();
+                
+                // Boundaries
+                const left = conductor.x - conductor.width / 2;
+                const right = conductor.x + conductor.width / 2;
+                const top = conductor.y - conductor.height / 2;
+                const bottom = conductor.y + conductor.height / 2;
+                
+                // Wrap
+                if (electron.x > right) {
+                    electron.x = left;
+                    electron.trail = [];
+                } else if (electron.x < left) {
+                    electron.x = right;
+                    electron.trail = [];
+                }
+                
+                // Bounce
+                if (electron.y < top) {
+                    electron.y = top;
+                    electron.vy *= -0.8;
+                } else if (electron.y > bottom) {
+                    electron.y = bottom;
+                    electron.vy *= -0.8;
+                }
+            });
+            
+            const avgDrift = electrons.length > 0 ? totalDrift / electrons.length : 0;
+            document.getElementById('avgDrift').textContent = avgDrift.toFixed(3) + " px";
+        }
+        
+        function draw() {
+            ctx.fillStyle = 'rgba(10, 14, 39, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (Math.random() < 0.1) {
+                ctx.fillStyle = '#0a0e27';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            const left = conductor.x - conductor.width / 2;
+            const right = conductor.x + conductor.width / 2;
+            const top = conductor.y - conductor.height / 2;
+            const bottom = conductor.y + conductor.height / 2;
+            
+            // Draw Conductor
+            ctx.fillStyle = '#1a2f4f';
+            ctx.fillRect(left, top, conductor.width, conductor.height);
+            ctx.strokeStyle = '#4a5f7f';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(left, top, conductor.width, conductor.height);
+            
+            // Draw E-Field (Right to Left)
+            if (voltage > 0.1) {
+                ctx.strokeStyle = 'rgba(255, 107, 107, 0.4)';
+                ctx.lineWidth = 1;
+                for (let y = top + 15; y < bottom; y += 15) {
+                    ctx.beginPath();
+                    ctx.moveTo(right - 20, y); // Start Right
+                    ctx.lineTo(left + 20, y);   // End Left
+                    ctx.stroke();
+                }
+                
+                ctx.strokeStyle = '#ff6b6b';
+                ctx.fillStyle = '#ff6b6b';
+                ctx.lineWidth = 2;
+                const arrowY = top - 30;
+                const arrowSpacing = 120;
+                
+                for (let x = right - 60; x > left + 60; x -= arrowSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, arrowY);
+                    ctx.lineTo(x - 80, arrowY); // Draw Left
+                    ctx.stroke();
+                    
+                    // Arrowhead Left
+                    ctx.beginPath();
+                    ctx.moveTo(x - 80, arrowY);
+                    ctx.lineTo(x - 70, arrowY - 6);
+                    ctx.lineTo(x - 70, arrowY + 6);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText('E-field', left, arrowY - 12);
+                
+                // Terminals
+                ctx.fillStyle = '#ff6b6b';
+                ctx.font = 'bold 24px Arial';
+                ctx.fillText('+', right + 15, conductor.y + 8);
+                ctx.fillStyle = '#4da6ff';
+                ctx.fillText('−', left - 30, conductor.y + 8);
+            }
+            
+            // Draw Electrons
+            electrons.forEach(electron => {
+                if (electron.trail.length > 1) {
+                    ctx.strokeStyle = 'rgba(100, 255, 218, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(electron.trail[0].x, electron.trail[0].y);
+                    for (let i = 1; i < electron.trail.length; i++) {
+                        ctx.lineTo(electron.trail[i].x, electron.trail[i].y);
+                    }
+                    ctx.stroke();
+                }
+                
+                ctx.beginPath();
+                ctx.arc(electron.x, electron.y, 3.5, 0, Math.PI * 2);
+                
+                const gradient = ctx.createRadialGradient(
+                    electron.x, electron.y, 0,
+                    electron.x, electron.y, 8
+                );
+                gradient.addColorStop(0, '#4da6ff');
+                gradient.addColorStop(0.5, 'rgba(77, 166, 255, 0.5)');
+                gradient.addColorStop(1, 'rgba(77, 166, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fill();
+                
+                ctx.fillStyle = '#4da6ff';
+                ctx.beginPath();
+                ctx.arc(electron.x, electron.y, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            
+            // Draw Drift Arrow (Right)
+            if (voltage > 0.1 && electrons.length > 0) {
+                const sampleElectron = electrons[0];
+                const arrowLength = 30;
+                const arrowY = bottom + 40;
+                
+                ctx.strokeStyle = '#ffd700';
+                ctx.fillStyle = '#ffd700';
+                ctx.lineWidth = 3;
+                
+                ctx.beginPath();
+                ctx.moveTo(sampleElectron.x, arrowY);
+                ctx.lineTo(sampleElectron.x + arrowLength, arrowY); // Draw Right
+                ctx.stroke();
+                
+                // Arrowhead Right
+                ctx.beginPath();
+                ctx.moveTo(sampleElectron.x + arrowLength, arrowY);
+                ctx.lineTo(sampleElectron.x + arrowLength - 8, arrowY - 5);
+                ctx.lineTo(sampleElectron.x + arrowLength - 8, arrowY + 5);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.font = '12px Arial';
+                ctx.fillText('drift', sampleElectron.x, arrowY + 20);
+            }
+        }
+        
+        function animate() {
+            const now = Date.now();
+            const delta = now - lastFrameTime;
+            fps = Math.round(1000 / delta);
+            lastFrameTime = now;
+            document.getElementById('fpsStat').textContent = fps;
+            
+            updateElectrons();
+            draw();
+            requestAnimationFrame(animate);
+        }
+
+        // --- Inputs ---
+        function getPointerPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function handleStart(e) {
+            const pos = getPointerPos(e);
+            if (pos.x >= conductor.x - conductor.width/2 &&
+                pos.x <= conductor.x + conductor.width/2 &&
+                pos.y >= conductor.y - conductor.height/2 &&
+                pos.y <= conductor.y + conductor.height/2) {
+                conductor.isDragging = true;
+                conductor.dragOffsetX = pos.x - conductor.x;
+                conductor.dragOffsetY = pos.y - conductor.y;
+            }
+        }
+
+        function handleMove(e) {
+            if (conductor.isDragging) {
+                if(e.type === 'touchmove') e.preventDefault();
+                const pos = getPointerPos(e);
+                conductor.x = pos.x - conductor.dragOffsetX;
+                conductor.y = pos.y - conductor.dragOffsetY;
+                
+                conductor.x = Math.max(conductor.width/2, Math.min(canvas.width - conductor.width/2, conductor.x));
+                conductor.y = Math.max(conductor.height/2 + 50, Math.min(canvas.height - conductor.height/2 - 50, conductor.y));
+            }
+        }
+
+        function handleEnd() { conductor.isDragging = false; }
+
+        canvas.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        canvas.addEventListener('touchstart', handleStart, {passive: false});
+        window.addEventListener('touchmove', handleMove, {passive: false});
+        window.addEventListener('touchend', handleEnd);
+        
+        // --- Control Listeners ---
+        document.getElementById('voltage').addEventListener('input', (e) => {
+            voltage = parseFloat(e.target.value);
+            document.getElementById('voltageValue').textContent = voltage.toFixed(1) + ' V';
+            updateCalculations();
+        });
+
+        document.getElementById('temperature').addEventListener('input', (e) => {
+            temperature = parseInt(e.target.value);
+            document.getElementById('tempValue').textContent = temperature + ' K';
+            updateCalculations();
+        });
+
+        document.getElementById('length').addEventListener('input', (e) => {
+            length = parseFloat(e.target.value);
+            document.getElementById('lengthValue').textContent = length.toFixed(1) + ' m';
+            
+            // FIX: Update visual width immediately
+            resize();
+            updateCalculations();
+        });
+        
+        document.getElementById('electronCount').addEventListener('input', (e) => {
+            numElectrons = parseInt(e.target.value);
+            document.getElementById('electronCountValue').textContent = numElectrons + ' electrons';
+            document.getElementById('electronStat').textContent = numElectrons;
+            updateElectronCount();
+        });
+        
+        // Initialize
+        initElectrons();
+        updateCalculations();
+        animate();
+    </script>
+</body>
+</html>
